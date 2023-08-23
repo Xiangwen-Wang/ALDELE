@@ -27,4 +27,4 @@ iteration=100
 #   model4: 1+2+3,
 #   model5: 1+2+3+4.
 setting=5
-python Detool_training.py $pathdir $radius $ngram $dim $layer_gnn $window $layer_cnn $layer_nn $layer_output $lr $lr_decay $decay_interval $weight_decay $iteration $setting
+python ALDELE_training.py $pathdir $radius $ngram $dim $layer_gnn $window $layer_cnn $layer_nn $layer_output $lr $lr_decay $decay_interval $weight_decay $iteration $setting
