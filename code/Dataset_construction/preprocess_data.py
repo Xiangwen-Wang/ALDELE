@@ -33,6 +33,19 @@ def load_pssm(pssmdir,name):
 
     return np.array(all_points)
 
+def load_energyfile(energydir,name):
+    all_points = []
+    energyline = []
+    with open(energydir +'/'+ name,
+              'r') as energyfile:
+        for line in energyfile:
+            point_tmp = line.split(' ')
+            point_tmp = [x.strip() for x in point_tmp if x.strip() != ' ']
+            point_tmp = list(map(float, point_tmp))
+            all_points.append(point_tmp)
+
+    return np.array(all_points)
+
 def create_ijbonddict(mol):
     """Create a dictionary, which each key is a node ID
     and each value is the tuples of its neighboring node
@@ -95,7 +108,7 @@ def dump_dictionary(dictionary, filename):
 
 if __name__ == "__main__":
 
-    DATASET, pssmdir, radius, ngram, dim = sys.argv[1:]
+    DATASET, pssmdir, energydir, radius, ngram, dim = sys.argv[1:]
     radius, ngram, dim = map(int, [radius, ngram, dim])
 
     with open(DATASET+'/dataset.txt', 'r') as f:
@@ -114,14 +127,14 @@ if __name__ == "__main__":
     fingerprint_dict = defaultdict(lambda: len(fingerprint_dict))
     edge_dict = defaultdict(lambda: len(edge_dict))
     word_dict = defaultdict(lambda: len(word_dict))
-
     pssm_dict = defaultdict(lambda: len(pssm_dict))
+    energy_dict = defaultdict(lambda: len(energy_dict))
     rdkitfeature_dict = defaultdict(lambda: len(rdkitfeature_dict))
 
     Smiles, compounds, adjacencies, proteins, interactions = '', [], [], [], []
 
     pssms = []
-
+    energy = []
     rdkitfeatures = []
 
     dir_input = (DATASET+'/input/'+
@@ -132,11 +145,13 @@ if __name__ == "__main__":
     for no, data in enumerate(data_list):
         item, pname, smiles, sequence, interaction = data.strip().split()
 
-
         item = int(item)
 
         singlefeature = arrayT[item][1:]
         rdkitfeatures.append(singlefeature)
+
+        singleenergy = load_energyfile(energydir, pname)
+        energy.append(singleenergy)
 
         singlepssm = load_pssm(pssmdir, pname)
         pssms.append(singlepssm)
@@ -168,11 +183,12 @@ if __name__ == "__main__":
 
     np.save(dir_input + 'pssms', pssms)
 
+    np.save(dir_input + 'energys', energy)
+
     np.save(dir_input + 'rdkitfeatures', rdkitfeatures)
 
-    # interactions 的标准化处理
+ 
     # ss = preprocessing.StandardScaler()
-    # interactions 的归一化处理
     # ss = preprocessing.MinMaxScaler()
     # std_interactions = ss.fit_transform(interactions)
 
