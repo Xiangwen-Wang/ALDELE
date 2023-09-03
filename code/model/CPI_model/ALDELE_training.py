@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from sklearn.model_selection import KFold
-
+from sklearn.decomposition import PCA
 from sklearn.metrics import mean_squared_error,r2_score
 
 
@@ -30,6 +30,7 @@ class CPIPrediction(nn.Module):
                      stride=1, padding=window) for _ in range(layer_cnn)])
         self.W_nn = nn.ModuleList([nn.Linear(dim, dim)
                                    for _ in range(layer_nn)])
+        self.simple_layer = nn.Linear(in_features=2 * dim, out_features=dim)
 
         self.W_attention = nn.Linear(dim, dim)
 
@@ -61,7 +62,7 @@ class CPIPrediction(nn.Module):
         # return torch.unsqueeze(torch.sum(xs, 0), 0)
             return torch.unsqueeze(torch.mean(xs, 0), 0)
 
-    def pssm_cnn(self, x, layer):
+    def matrix_cnn(self, x, layer):
         x = torch.unsqueeze(torch.unsqueeze(x, 0), 0)
         for i in range(layer):
             x = torch.relu(self.W_cnn[i](x))
@@ -85,6 +86,10 @@ class CPIPrediction(nn.Module):
         h = torch.relu(self.W_attention(x))
         # return torch.unsqueeze(torch.sum(xs, 0), 0)
         return torch.unsqueeze(torch.mean(h, 0), 0)
+    def transform_rdkitfeatures(self, x):
+        linear_transform = nn.Linear(10, dim)
+        transformed_x = linear_transform(x)
+        return transformed_x
 
     def attention_p(self, x, xs, layer):
         """The attention mechanism is applied to the last layer of CNN."""
@@ -151,7 +156,7 @@ class CPIPrediction(nn.Module):
             compound_vector = self.gnn(fingerprint_vectors, adjacency, layer_gnn)
             substrate_vector = compound_vector
             """PSSM vector with pssm-CNN."""
-            pssm_vector = self.pssm_cnn(pssms, layer_cnn)
+            pssm_vector = self.matrix_cnn(pssms, layer_cnn)
             protein_vector = pssm_vector
 
         if (int(setting) == 3):
@@ -162,8 +167,8 @@ class CPIPrediction(nn.Module):
             compound_vector = self.gnn(fingerprint_vectors, adjacency, layer_gnn)
             substrate_vector = compound_vector
 
-            """PSSM vector with pssm-CNN."""
-            pssm_vector = self.pssm_cnn(pssms, layer_cnn)
+            """PSSM vector with matrix-cnn."""
+            pssm_vector = self.matrix_cnn(pssms, layer_cnn)
             """Protein vector with attention-CNN."""
             word_vectors = self.embed_word(words)
             protein_vector = self.attention_p(pssm_vector, word_vectors, layer_cnn)
@@ -175,7 +180,10 @@ class CPIPrediction(nn.Module):
             fingerprint_vectors = self.embed_fingerprint(fingerprints)
             compound_vector = self.gnn(fingerprint_vectors, adjacency, layer_gnn)
             """feature vector with NN."""
-            rdkitfeature_vector = self.nn(rdkitfeatures, layer_nn)
+            rdkitfeatures = rdkitfeatures.view(1, -1)
+            rdkitfeatures_transformed = self.transform_rdkitfeatures(rdkitfeatures)
+            rdkitfeature_vector = self.nn(rdkitfeatures_transformed, layer_nn)
+
             substrate_vector = self.attention_s(rdkitfeature_vector, compound_vector, layer_cnn)
             """Protein vector from embed_words."""
             word_vectors = self.embed_word(words)
@@ -188,24 +196,64 @@ class CPIPrediction(nn.Module):
             fingerprint_vectors = self.embed_fingerprint(fingerprints)
             compound_vector = self.gnn(fingerprint_vectors, adjacency, layer_gnn)
             """feature vector with NN."""
-            rdkitfeature_vector = self.nn(rdkitfeatures, layer_nn)
+            rdkitfeatures = rdkitfeatures.view(1, -1)
+            rdkitfeatures_transformed = self.transform_rdkitfeatures(rdkitfeatures)
+            rdkitfeature_vector = self.nn(rdkitfeatures_transformed, layer_nn)
+
             substrate_vector = self.attention_s(rdkitfeature_vector, compound_vector, layer_cnn)
 
-            """PSSM vector with pssm-CNN."""
-            pssm_vector = self.pssm_cnn(pssms, layer_cnn)
+            """PSSM vector with matrix-cnn."""
+            pssm_vector = self.matrix_cnn(pssms, layer_cnn)
             """Protein vector with attention-CNN."""
             word_vectors = self.embed_word(words)
             protein_vector = self.attention_p(pssm_vector, word_vectors, layer_cnn)
+
+        if (int(setting) == 6):
+            fingerprints, adjacency, words, pssms, energys, rdkitfeatures = inputs
+
+            """Compound vector with GNN."""
+            fingerprint_vectors = self.embed_fingerprint(fingerprints)
+            compound_vector = self.gnn(fingerprint_vectors, adjacency, layer_gnn)
+
+            """feature vector with NN."""
+            rdkitfeatures = rdkitfeatures.view(1, -1)
+            rdkitfeatures_transformed = self.transform_rdkitfeatures(rdkitfeatures)
+            rdkitfeature_vector = self.nn(rdkitfeatures_transformed, layer_nn)
+
+            substrate_vector = self.attention_s(rdkitfeature_vector, compound_vector, layer_cnn)
+
+            """PSSM vector with pssm-CNN."""
+            pssm_vector = self.matrix_cnn(pssms, layer_cnn)
+
+            """Protein vector with attention-CNN."""
+            word_vectors = self.embed_word(words)
+            """Energy vector with matrix-cnn."""
+            energys_np = np.array(energys)
+            pca = PCA(n_components=dim)
+            energys_reduced = pca.fit_transform(energys_np)
+            energys_reduced_tensor = torch.tensor(energys_reduced, dtype=torch.float32)
+            energy_vector = self.matrix_cnn(energys_reduced_tensor, layer_cnn)
+
+            sequence_vector = self.attention_p(pssm_vector, word_vectors, layer_cnn)
+
+            # Combine sequence_vector and energy_vector
+            combined_vector = torch.cat([sequence_vector, energy_vector], dim=1)
+
+            # Apply a linear layer to the combined vector
+            protein_vector = self.simple_layer(combined_vector)
 
         """pairwise vector"""
         pairwise_pred = self.pairwise_module(substrate_vector, protein_vector, layer_cnn)
 
         """Concatenate the above vectors and output the interaction."""
         cat_vector = torch.cat((substrate_vector, protein_vector, pairwise_pred), 1)
-
         for j in range(layer_output):
             cat_vector = torch.relu(self.W_out[j](cat_vector))
         interaction = self.W_interaction(cat_vector)
+
+        # for j in range(layer_output):
+        #     cat_vector = torch.relu(self.W_out[j](pairwise_pred))
+        # interaction = self.W_interaction(cat_vector)
 
         return interaction
     
@@ -319,10 +367,12 @@ if __name__ == "__main__":
     interactions = load_tensor(dir_input + 'interactions', torch.FloatTensor)
     fingerprint_dict = load_pickle(dir_input + 'fingerprint_dict.pickle')
     word_dict = load_pickle(dir_input + 'word_dict.pickle')
-    if (int(setting) == 2) or (int(setting) == 3) or (int(setting) == 5):
+    if (int(setting) == 2) or (int(setting) == 3) or (int(setting) == 5) or (int(setting) == 6):
         pssms = load_tensor(dir_input + 'pssms', torch.FloatTensor)
-    if (int(setting) == 4) or (int(setting) == 5):
+    if (int(setting) == 4) or (int(setting) == 5) or (int(setting) == 6):
         rdkitfeatures = load_tensor(dir_input + 'rdkitfeatures', torch.FloatTensor)
+    if (int(setting) == 6):
+        energys = load_tensor(dir_input + 'energys', torch.FloatTensor)
     n_fingerprint = len(fingerprint_dict)
     n_word = len(word_dict)
 
@@ -337,37 +387,38 @@ if __name__ == "__main__":
         dataset = list(zip(compounds, adjacencies, proteins, rdkitfeatures, interactions))
     if (int(setting) == 5):
         dataset = list(zip(compounds, adjacencies, proteins, pssms, rdkitfeatures, interactions))
-
+    if (int(setting) == 6):
+        dataset = list(zip(compounds, adjacencies, proteins, pssms, energys, rdkitfeatures, interactions))
 
     dataset = shuffle_dataset(dataset, 1234)
 
-    """cross-validation"""
-    num_folds = 5
-    kf = KFold(n_splits=num_folds, shuffle=True, random_state=42)
-    # Initialize a list to store the evaluation results for each fold
-    fold_results = []
-    for fold, (train_indices, test_indices) in enumerate(kf.split(dataset)):
-        print(f"Fold {fold + 1}/{num_folds}")
-
-        # Split dataset into train and test sets for the current fold
-        dataset_train = dataset[train_indices]
-        dataset_test = dataset[test_indices]
-
-        # Set a model for the current fold
-        torch.manual_seed(1234)
-        model = CPIPrediction().to(device)
-        trainer = Trainer(model)
-        tester = Tester(model)
-
-        # Train the model on the training data for the current fold
-        trainer.train(dataset_train)
-
-        # Evaluate the model on the test data for the current fold
-        fold_result = tester.test(dataset_test)
-        fold_results.append(fold_result)
-
-    # Calculate and print the average evaluation results across all folds
-    average_results = sum(fold_results) / num_folds
+    # """cross-validation"""
+    # num_folds = 5
+    # kf = KFold(n_splits=num_folds, shuffle=True, random_state=42)
+    # # Initialize a list to store the evaluation results for each fold
+    # fold_results = []
+    # for fold, (train_indices, test_indices) in enumerate(kf.split(dataset)):
+    #     print(f"Fold {fold + 1}/{num_folds}")
+    #
+    #     # Split dataset into train and test sets for the current fold
+    #     dataset_train = dataset[train_indices]
+    #     dataset_test = dataset[test_indices]
+    #
+    #     # Set a model for the current fold
+    #     torch.manual_seed(1234)
+    #     model = CPIPrediction().to(device)
+    #     trainer = Trainer(model)
+    #     tester = Tester(model)
+    #
+    #     # Train the model on the training data for the current fold
+    #     trainer.train(dataset_train)
+    #
+    #     # Evaluate the model on the test data for the current fold
+    #     fold_result = tester.test(dataset_test)
+    #     fold_results.append(fold_result)
+    #
+    # # Calculate and print the average evaluation results across all folds
+    # average_results = sum(fold_results) / num_folds
 
     """Random split"""
     dataset_train, dataset_ = split_dataset(dataset, 0.8)
