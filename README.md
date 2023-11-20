@@ -9,6 +9,7 @@ This repository contains the PyTorch implementation of **ALDELE** framework.
 It works on two-dimensional (2D) molecular graphs and physicochemical properties of compounds, and target protein sequences with amino acid evolutionary matrix to perform prediction.
 ## Framework
 ![1](https://github.com/Xiangwen-Wang/ALDELE/assets/83728171/6dbde8b3-4823-4f52-aaf6-ca2289edb716)
+
 ## System Requirements
 The source code developed in Python 3.10. The required python dependencies are given below. 
 
@@ -30,7 +31,7 @@ useful-rdkit-utils==0.2.7
 ```
 
 ## Datasets
-The `datasets` folder contains all experimental data used in ALDELE.
+The `datasets` folder contains all original experimental data used in ALDELE.
  
 
 ## Data construction
@@ -40,13 +41,23 @@ Please check the Data_construction_protocol.doc for details of each step.
 
 ## Run ALDELE on Our Data to Reproduce Results
 
-To train ALDELE, where we provide the basic configurations for all hyperparameters in `submit.sh`.
-The folder name also need to modified based on the path you save your datasets.
-
+To train ALDELE, we provide the dataset after basic submit bash file with hyperparameters in `submit.sh` of `model/CPI_model`.
+The setting parameters in the submit.sh can be set as 1 to 6 for 6 different combinations of toolkits as we describe in the paper.
+### component combination:
+###   model1: 2+3,
+###   model2: 2+4,
+###   model3: 2+3+4,
+###   model4: 1+2+3,
+###   model5: 1+2+3+4.
+###   model6: full version, 2 sequence-based features + 2 ligand-based features + structure-based features
+The pathdir need to modified based on the path you save the datasets.
+Simply using the following code to train the model:
 ```
 $ bash submit.sh
 ```
+We provided a demo for CALB dataset in `demo_CALB.zip` with all the files generated through the method. With the input folder in this demo, you can easily run the ALDELE training.
 
+If you would like to build your own dataset and train with ALDELE, please make sure your dataset file is under the format requested in the data construction protocol, and follow this protocol to generate input folder for ALDELE.
 
 ## Acknowledgements
 This implementation is inspired and partially based on earlier works [1], [2] and [3].
