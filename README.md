@@ -43,13 +43,13 @@ Please check the Data_construction_protocol.doc for details of each step.
 
 To train ALDELE, we provide the dataset after basic submit bash file with hyperparameters in `submit.sh` of `model/CPI_model`.
 The setting parameters in the submit.sh can be set as 1 to 6 for 6 different combinations of toolkits as we describe in the paper.
-### component combination:
-###   model1: 2+3,
-###   model2: 2+4,
-###   model3: 2+3+4,
-###   model4: 1+2+3,
-###   model5: 1+2+3+4.
-###   model6: full version, 2 sequence-based features + 2 ligand-based features + structure-based features
+#### component combination:
+####   model1: toolkit2+toolkit3,
+####   model2: toolkit2+toolkit4,
+####   model3: toolkit2+toolkit3+toolkit4,
+####   model4: toolkit1+toolkit2+toolkit3,
+####   model5: toolkit1+toolkit2+toolkit3+toolkit4.
+####   model6: full version, 2 sequence-based features + 2 ligand-based features + structure-based features
 The pathdir need to modified based on the path you save the datasets.
 Simply using the following code to train the model:
 ```
