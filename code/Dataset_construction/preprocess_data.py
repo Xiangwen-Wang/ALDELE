@@ -137,7 +137,7 @@ if __name__ == "__main__":
     energy = []
     rdkitfeatures = []
 
-    dir_input = (DATASET+'/input_test/'+
+    dir_input = (DATASET+'/input/'+
                  'radius' + str(radius) + '_ngram' + str(ngram) + '/')
     os.makedirs(dir_input, exist_ok=True)
 
