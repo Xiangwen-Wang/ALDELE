@@ -30,6 +30,24 @@ useful-rdkit-utils==0.2.7
 
 ```
 
+## Installation Guide
+Clone this Github repo and set up a new conda environment, or create a new project in pycharm with python 3.10.
+
+```
+# create a new conda environment
+$ conda create --name ALDELE
+$ conda activate ALDELE
+
+# install requried python dependencies
+$ pip install numpy
+$ pip install torch
+$ pip install scikit-learn
+
+
+
+# clone the source code of ALDELE and go into the model folder
+```
+
 ## Datasets
 The `datasets` folder contains all original experimental data used in ALDELE.
  
@@ -55,6 +73,7 @@ Simply using the following code to train the model:
 ```
 $ bash submit.sh
 ```
+The output results and model can be found in /output_modelx folders.
 We provided a demo for CALB dataset in `demo_CALB.zip` with all the files generated through the method. With the input folder in this demo, you can easily run the ALDELE training.
 
 If you would like to build your own dataset and train with ALDELE, please make sure your dataset file is under the format requested in the data construction protocol, and follow this protocol to generate input folder for ALDELE.
