@@ -1,8 +1,8 @@
 #!/bin/bash
 
-DATASET=/Users/xw0201/Desktop/postdoc/NNmodel_dataset/CALB/calb_a_bsla/con_results
-pssmdir=/Users/xw0201/Desktop/postdoc/NNmodel_dataset/CALB/calb_a_bsla/con_results/pssm_slidingwindow
-
+DATASET=path to Dataset
+pssmdir=path to pssm folder
+energydir=path to enery term folder
 # radius=0  # w/o fingerprints (i.e., atoms).
 # radius=1
 radius=2
@@ -11,4 +11,4 @@ dim=10
 # ngram=2
 ngram=3
 
-python preprocess_data.py $DATASET $pssmdir $radius $ngram $dim
+python preprocess_data.py $DATASET $pssmdir $energydir $radius $ngram $dim

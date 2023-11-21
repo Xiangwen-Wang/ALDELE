@@ -137,7 +137,7 @@ if __name__ == "__main__":
     energy = []
     rdkitfeatures = []
 
-    dir_input = (DATASET+'/input/'+
+    dir_input = (DATASET+'/input_test/'+
                  'radius' + str(radius) + '_ngram' + str(ngram) + '/')
     os.makedirs(dir_input, exist_ok=True)
 
@@ -187,10 +187,6 @@ if __name__ == "__main__":
 
     np.save(dir_input + 'rdkitfeatures', rdkitfeatures)
 
- 
-    # ss = preprocessing.StandardScaler()
-    # ss = preprocessing.MinMaxScaler()
-    # std_interactions = ss.fit_transform(interactions)
 
     np.save(dir_input + 'interactions', interactions)
     dump_dictionary(fingerprint_dict, dir_input + 'fingerprint_dict.pickle')
