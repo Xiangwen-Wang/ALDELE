@@ -43,8 +43,6 @@ $ pip install numpy
 $ pip install torch
 $ pip install scikit-learn
 
-
-
 # clone the source code of ALDELE and go into the model folder
 ```
 
