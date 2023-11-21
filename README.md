@@ -40,7 +40,7 @@ $ conda activate ALDELE
 
 # install requried python dependencies
 $ pip install pandas
-$ pip install numpy
+$ pip install numpy==1.23.1 
 $ pip install torch
 $ pip install scikit-learn
 
