@@ -39,6 +39,7 @@ $ conda create --name ALDELE
 $ conda activate ALDELE
 
 # install requried python dependencies
+$ pip install pandas
 $ pip install numpy
 $ pip install torch
 $ pip install scikit-learn
