@@ -74,13 +74,6 @@ $ bash submit.sh
 ```
 The output results and model can be found in /output_modelx folders.
 
-## Demo
-We provided a demo for CALB dataset in `demo_CALB.zip` with all the files generated through the method. 
-change the process
-With the input folder in this demo, you can easily run the ALDELE training.
-
-If you would like to build your own dataset and train with ALDELE, please make sure your dataset file is under the format requested in the data construction protocol, and follow this protocol to generate input folder for ALDELE.
-
 ## Acknowledgements
 This implementation is inspired and partially based on earlier works [1] and [2].
 
