@@ -73,15 +73,18 @@ Simply using the following code to train the model:
 $ bash submit.sh
 ```
 The output results and model can be found in /output_modelx folders.
-We provided a demo for CALB dataset in `demo_CALB.zip` with all the files generated through the method. With the input folder in this demo, you can easily run the ALDELE training.
+
+## Demo
+We provided a demo for CALB dataset in `demo_CALB.zip` with all the files generated through the method. 
+change the process
+With the input folder in this demo, you can easily run the ALDELE training.
 
 If you would like to build your own dataset and train with ALDELE, please make sure your dataset file is under the format requested in the data construction protocol, and follow this protocol to generate input folder for ALDELE.
 
 ## Acknowledgements
-This implementation is inspired and partially based on earlier works [1], [2] and [3].
+This implementation is inspired and partially based on earlier works [1] and [2].
 
 
 ## References
     [1] Tsubaki, Masashi, Kentaro Tomii, and Jun Sese. "Compound–protein interaction prediction with end-to-end learning of neural networks for graphs and sequences." Bioinformatics 35.2 (2019): 309-318.
     [2] Li, Feiran, et al. "Deep learning-based k cat prediction enables improved enzyme-constrained model reconstruction." Nature Catalysis 5.8 (2022): 662-672.
-    [3] Li, Shuya, et al. "MONN: a multi-objective neural network for predicting compound-protein interactions and affinities." Cell Systems 10.4 (2020): 308-322.
