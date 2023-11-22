@@ -37,10 +37,12 @@ class CPIPrediction(nn.Module):
         self.pairwise_transform = nn.Linear(dim, dim)
         self.p_out = nn.ModuleList([nn.Linear(dim, dim)
                                    for _ in range(layer_nn)])
-
-        self.W_out = nn.ModuleList([nn.Linear(3*dim, 3*dim)
+        self.W_out_p = nn.ModuleList([nn.Linear(3*dim, 3*dim)
                                     for _ in range(layer_output)])
-        self.W_interaction = nn.Linear(3*dim, 1)
+        self.W_interaction_p = nn.Linear(3*dim, 1)
+        self.W_out = nn.ModuleList([nn.Linear(2*dim, 2*dim)
+                                    for _ in range(layer_output)])
+        self.W_interaction = nn.Linear(2*dim, 1)
 
         self.device = device
         self.dim = dim
@@ -242,19 +244,18 @@ class CPIPrediction(nn.Module):
             # Apply a linear layer to the combined vector
             protein_vector = self.simple_layer(combined_vector)
 
-        """pairwise vector"""
-        pairwise_pred = self.pairwise_module(substrate_vector, protein_vector, layer_cnn)
 
-        """Concatenate the above vectors and output the interaction."""
-        cat_vector = torch.cat((substrate_vector, protein_vector, pairwise_pred), 1)
-        for j in range(layer_output):
-            cat_vector = torch.relu(self.W_out[j](cat_vector))
-        interaction = self.W_interaction(cat_vector)
-
-        # for j in range(layer_output):
-        #     cat_vector = torch.relu(self.W_out[j](pairwise_pred))
-        # interaction = self.W_interaction(cat_vector)
-
+        if (int(pairwise) == 1):
+            pairwise_pred = self.pairwise_module(substrate_vector, protein_vector, layer_cnn)
+            cat_vector = torch.cat((substrate_vector, protein_vector, pairwise_pred), 1)
+            for j in range(layer_output):
+                cat_vector = torch.relu(self.W_out_p[j](cat_vector))
+            interaction = self.W_interaction_p(cat_vector)
+        else:
+            cat_vector = torch.cat((substrate_vector, protein_vector), 1)
+            for j in range(layer_output):
+                cat_vector = torch.relu(self.W_out[j](cat_vector))
+            interaction = self.W_interaction(cat_vector)
         return interaction
     
     def __call__(self, data, train=True):
@@ -338,88 +339,8 @@ def split_dataset(dataset, ratio):
     dataset_1, dataset_2 = dataset[:n], dataset[n:]
     return dataset_1, dataset_2
 
-
-if __name__ == "__main__":
-
-    """Hyperparameters."""
-    (DATASET, radius, ngram, dim, layer_gnn, window, layer_cnn, layer_nn, layer_output,
-     lr, lr_decay, decay_interval, weight_decay, iteration,
-     setting) = sys.argv[1:]
-    (dim, layer_gnn, window, layer_cnn, layer_nn, layer_output, decay_interval,
-     iteration) = map(int, [dim, layer_gnn, window, layer_cnn, layer_nn, layer_output,
-                            decay_interval, iteration])
-    lr, lr_decay, weight_decay = map(float, [lr, lr_decay, weight_decay])
-
-    """CPU or GPU."""
-    if torch.cuda.is_available():
-        device = torch.device('cuda')
-        print('The code uses GPU...')
-    else:
-        device = torch.device('cpu')
-        print('The code uses CPU!!!')
-
-    """Load preprocessed data."""
-    dir_input = (DATASET+'/input/'
-                 +'radius' + radius + '_ngram' + ngram + '/')
-    compounds = load_tensor(dir_input + 'compounds', torch.LongTensor)
-    adjacencies = load_tensor(dir_input + 'adjacencies', torch.FloatTensor)
-    proteins = load_tensor(dir_input + 'proteins', torch.LongTensor)
-    interactions = load_tensor(dir_input + 'interactions', torch.FloatTensor)
-    fingerprint_dict = load_pickle(dir_input + 'fingerprint_dict.pickle')
-    word_dict = load_pickle(dir_input + 'word_dict.pickle')
-    if (int(setting) == 2) or (int(setting) == 3) or (int(setting) == 5) or (int(setting) == 6):
-        pssms = load_tensor(dir_input + 'pssms', torch.FloatTensor)
-    if (int(setting) == 4) or (int(setting) == 5) or (int(setting) == 6):
-        rdkitfeatures = load_tensor(dir_input + 'rdkitfeatures', torch.FloatTensor)
-    if (int(setting) == 6):
-        energys = load_tensor(dir_input + 'energys', torch.FloatTensor)
-    n_fingerprint = len(fingerprint_dict)
-    n_word = len(word_dict)
-
-    """Create a dataset and split it into train/dev/test."""
-    if (int(setting) == 1):
-        dataset = list(zip(compounds, adjacencies, proteins, interactions))
-    if (int(setting) == 2):
-        dataset = list(zip(compounds, adjacencies, pssms, interactions))
-    if (int(setting) == 3):
-        dataset = list(zip(compounds, adjacencies, proteins, pssms, interactions))
-    if (int(setting) == 4):
-        dataset = list(zip(compounds, adjacencies, proteins, rdkitfeatures, interactions))
-    if (int(setting) == 5):
-        dataset = list(zip(compounds, adjacencies, proteins, pssms, rdkitfeatures, interactions))
-    if (int(setting) == 6):
-        dataset = list(zip(compounds, adjacencies, proteins, pssms, energys, rdkitfeatures, interactions))
-
+def random_split(dataset):
     dataset = shuffle_dataset(dataset, 1234)
-
-    # """cross-validation"""
-    # num_folds = 5
-    # kf = KFold(n_splits=num_folds, shuffle=True, random_state=42)
-    # # Initialize a list to store the evaluation results for each fold
-    # fold_results = []
-    # for fold, (train_indices, test_indices) in enumerate(kf.split(dataset)):
-    #     print(f"Fold {fold + 1}/{num_folds}")
-    #
-    #     # Split dataset into train and test sets for the current fold
-    #     dataset_train = dataset[train_indices]
-    #     dataset_test = dataset[test_indices]
-    #
-    #     # Set a model for the current fold
-    #     torch.manual_seed(1234)
-    #     model = CPIPrediction().to(device)
-    #     trainer = Trainer(model)
-    #     tester = Tester(model)
-    #
-    #     # Train the model on the training data for the current fold
-    #     trainer.train(dataset_train)
-    #
-    #     # Evaluate the model on the test data for the current fold
-    #     fold_result = tester.test(dataset_test)
-    #     fold_results.append(fold_result)
-    #
-    # # Calculate and print the average evaluation results across all folds
-    # average_results = sum(fold_results) / num_folds
-
     """Random split"""
     dataset_train, dataset_ = split_dataset(dataset, 0.8)
     dataset_dev, dataset_test = split_dataset(dataset_, 0.5)
@@ -460,3 +381,107 @@ if __name__ == "__main__":
         tester.save_model(model, file_model)
 
         print('\t'.join(map(str, MAEs)))
+
+def kfold(dataset):
+    kf = KFold(n_splits=5, shuffle=True, random_state=1234)
+
+    for fold, (train_index, test_index) in enumerate(kf.split(dataset)):
+        dataset_train = [dataset[i] for i in train_index]
+        dataset_test = [dataset[i] for i in test_index]
+        dataset_dev, _ = split_dataset(dataset_test, 0.5)  # Split dataset_test into dev and test
+
+        """Set a model for each fold."""
+        torch.manual_seed(1234)
+        model = CPIPrediction().to(device)
+        trainer = Trainer(model)
+        tester = Tester(model)
+
+        """Output files."""
+        outputdir = DATASET + f'/output_model{setting}_fold{fold}'
+        os.makedirs(outputdir, exist_ok=True)
+        file_MAEs = outputdir + '/results.txt'
+        file_model = outputdir + '/model'
+        MAEs = ('Epoch\tTime(sec)\tLoss_train\tMAE_dev\tMAE_test\tRMSE_dev\tRMSE_test\tR2_dev\tR2_test')
+        with open(file_MAEs, 'w') as f:
+            f.write(MAEs + '\n')
+        print(file_MAEs)
+
+        """Start training for each fold."""
+        print(f'Training for Fold {fold}...')
+        print(MAEs)
+        start = timeit.default_timer()
+
+        for epoch in range(1, iteration):
+            if epoch % decay_interval == 0:
+                trainer.optimizer.param_groups[0]['lr'] *= lr_decay
+
+            loss_train = trainer.train(dataset_train)
+            MAE_dev, RMSE_dev, R2_dev = tester.test(dataset_dev)
+            MAE_test, RMSE_test, R2_test = tester.test(dataset_test)
+            MAE_train, RMSE_train, R2_train = tester.test(dataset_train)
+            end = timeit.default_timer()
+            time = end - start
+
+            MAEs = [epoch, time, loss_train, MAE_dev,
+                    MAE_test, RMSE_dev, RMSE_test, R2_dev, R2_test]
+            tester.save_MAEs(MAEs, file_MAEs)
+            tester.save_model(model, file_model)
+
+            print('\t'.join(map(str, MAEs)))
+
+
+if __name__ == "__main__":
+
+    """Hyperparameters."""
+    (DATASET, radius, ngram, dim, layer_gnn, window, layer_cnn, layer_nn, layer_output,
+     lr, lr_decay, decay_interval, weight_decay, iteration, kfs, pairwise,
+     setting) = sys.argv[1:]
+    (dim, layer_gnn, window, layer_cnn, layer_nn, layer_output, decay_interval,
+     iteration) = map(int, [dim, layer_gnn, window, layer_cnn, layer_nn, layer_output,
+                            decay_interval, iteration])
+    lr, lr_decay, weight_decay = map(float, [lr, lr_decay, weight_decay])
+
+    """CPU or GPU."""
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+        print('The code uses GPU...')
+    else:
+        device = torch.device('cpu')
+        print('The code uses CPU!!!')
+
+    """Load preprocessed data."""
+    dir_input = (DATASET+'/input/'
+                 +'radius' + radius + '_ngram' + ngram + '/')
+    compounds = load_tensor(dir_input + 'compounds', torch.LongTensor)
+    adjacencies = load_tensor(dir_input + 'adjacencies', torch.FloatTensor)
+    proteins = load_tensor(dir_input + 'proteins', torch.LongTensor)
+    interactions = load_tensor(dir_input + 'interactions', torch.FloatTensor)
+    fingerprint_dict = load_pickle(dir_input + 'fingerprint_dict.pickle')
+    word_dict = load_pickle(dir_input + 'word_dict.pickle')
+    if (int(setting) == 2) or (int(setting) == 3) or (int(setting) == 5) or (int(setting) == 6):
+        pssms = load_tensor(dir_input + 'pssms', torch.FloatTensor)
+    if (int(setting) == 4) or (int(setting) == 5) or (int(setting) == 6):
+        rdkitfeatures = load_tensor(dir_input + 'rdkitfeatures', torch.FloatTensor)
+    if (int(setting) == 6):
+        energys = load_tensor(dir_input + 'energys', torch.FloatTensor)
+    n_fingerprint = len(fingerprint_dict)
+    n_word = len(word_dict)
+
+    if (int(setting) == 1):
+        dataset = list(zip(compounds, adjacencies, proteins, interactions))
+    if (int(setting) == 2):
+        dataset = list(zip(compounds, adjacencies, pssms, interactions))
+    if (int(setting) == 3):
+        dataset = list(zip(compounds, adjacencies, proteins, pssms, interactions))
+    if (int(setting) == 4):
+        dataset = list(zip(compounds, adjacencies, proteins, rdkitfeatures, interactions))
+    if (int(setting) == 5):
+        dataset = list(zip(compounds, adjacencies, proteins, pssms, rdkitfeatures, interactions))
+    if (int(setting) == 6):
+        dataset = list(zip(compounds, adjacencies, proteins, pssms, energys, rdkitfeatures, interactions))
+
+    if (int(kfs) == 0):
+        random_split(dataset)
+    else:
+        kfold(dataset)
+
