@@ -54,7 +54,6 @@ The `datasets` folder contains all original experimental data used in ALDELE.
 ## Data construction
 the `code/Dataset_construction` folder contains the guidance of data preproceesing procedure.
 Please check the Data_construction_protocol.doc for details of each step.
-We provided `demo_CALB` which contains the files needed to build an ALDELE model. if you'd like to generate new ALDELE model with your own data, these are all the files you need to generate.
 
 ## Run ALDELE on Our Data to Reproduce Results
 
